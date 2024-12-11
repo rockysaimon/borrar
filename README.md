@@ -69,3 +69,40 @@ print(df)
 
 # 6. (Opcional) Guardar los datos en un archivo Excel o CSV
 df.to_excel("conteo_casos_por_dias_laborales.xlsx", index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+WITH
+    DIAS_FESTIVOS AS(
+    SELECT
+    CAST(CONVERT(VARCHAR,Fecha_Dia_Festivo,112) AS BIGINT) AS Fecha_Dia_Festivo
+    FROM INFIDELIDAD_SIE.Tbl_Dias_Festivos
+    ),
+
+    DIAS_LABORALES AS(
+    SELECT 
+    CONVERT(DATE,T1.FECHAS,23) AS Fecha
+    FROM TMP_DATA.TODOS_LOS_DIAS_YEAR AS T1 
+    LEFT JOIN DIAS_FESTIVOS AS T2
+    ON T1.FECHAS=T2.Fecha_Dia_Festivo
+    WHERE T2.Fecha_Dia_Festivo IS NULL
+    )
+    
+    SELECT 
+    DL.Fecha, 
+    SUM(CASE WHEN DL.Fecha BETWEEN C.Fecha_Ini_Invest AND C.Fecha_Compromiso_Cierre THEN 1 ELSE 0 END) AS Casos_En_Proceso, 
+    SUM(CASE WHEN DL.Fecha > C.Fecha_Compromiso_Cierre THEN 1 ELSE 0 END) AS Casos_Vencidos 
+    FROM Dias_Laborales DL 
+    LEFT JOIN Casos_Abiertos C 
+    ON DL.Fecha >= C.Fecha_Ini_Invest 
+    WHERE DL.Fecha >= (SELECT MIN(Fecha_Ini_Invest) FROM Casos_Abiertos) 
+    GROUP BY DL.Fecha ORDER BY DL.Fecha
