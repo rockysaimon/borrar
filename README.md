@@ -29,3 +29,43 @@ LA Fecha_Fin_Invest sólo la tiene si el caso ya se cerró y Fecha_Compromiso_Ci
 necesito ayuda para la lógica de cómo hacerlo, el resultado debe ser algo así:
 <img width="219" alt="{50257A38-4630-4995-9B58-A11476669B62}" src="https://github.com/user-attachments/assets/78c89f8c-6d23-440c-8c0e-48600e91d930" />
 
+
+import pyodbc
+import pandas as pd
+
+# 1. Conexión a SQL Server
+conn = pyodbc.connect("DRIVER={ODBC Driver 17 for SQL Server};"
+                      "SERVER=tu_servidor;"
+                      "DATABASE=tu_base_de_datos;"
+                      "UID=tu_usuario;"
+                      "PWD=tu_contraseña;")
+
+# 2. Consulta SQL para obtener el conteo de casos por días laborales
+query = """
+SELECT 
+    DL.Fecha,
+    SUM(CASE 
+            WHEN DL.Fecha BETWEEN C.Fecha_Ini_Invest AND C.Fecha_Compromiso_Cierre 
+                 THEN 1 ELSE 0 END) AS Casos_En_Proceso,
+    SUM(CASE 
+            WHEN DL.Fecha > C.Fecha_Compromiso_Cierre 
+                 THEN 1 ELSE 0 END) AS Casos_Vencidos
+FROM Dias_Laborales DL
+LEFT JOIN Casos_Abiertos C
+    ON DL.Fecha >= C.Fecha_Ini_Invest
+WHERE DL.Fecha >= (SELECT MIN(Fecha_Ini_Invest) FROM Casos_Abiertos)
+GROUP BY DL.Fecha
+ORDER BY DL.Fecha;
+"""
+
+# 3. Ejecutar la consulta y cargar los datos en un DataFrame
+df = pd.read_sql(query, conn)
+
+# 4. Cerrar la conexión
+conn.close()
+
+# 5. Visualizar los datos
+print(df)
+
+# 6. (Opcional) Guardar los datos en un archivo Excel o CSV
+df.to_excel("conteo_casos_por_dias_laborales.xlsx", index=False)
