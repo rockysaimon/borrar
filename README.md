@@ -106,3 +106,35 @@ WITH
     ON DL.Fecha >= C.Fecha_Ini_Invest 
     WHERE DL.Fecha >= (SELECT MIN(Fecha_Ini_Invest) FROM Casos_Abiertos) 
     GROUP BY DL.Fecha ORDER BY DL.Fecha
+
+
+    WITH DIAS_FESTIVOS AS (
+    SELECT 
+        CAST(Fecha_Dia_Festivo AS DATE) AS Fecha_Dia_Festivo 
+    FROM INFIDELIDAD_SIE.Tbl_Dias_Festivos
+),
+DIAS_LABORALES AS (
+    SELECT 
+        CAST(T1.FECHAS AS DATE) AS Fecha
+    FROM TMP_DATA.TODOS_LOS_DIAS_YEAR AS T1
+    LEFT JOIN DIAS_FESTIVOS AS T2
+        ON CAST(T1.FECHAS AS DATE) = T2.Fecha_Dia_Festivo
+    WHERE T2.Fecha_Dia_Festivo IS NULL  -- Excluir días festivos
+        AND DATEPART(WEEKDAY, T1.FECHAS) NOT IN (1, 7) -- Excluir fines de semana
+)
+SELECT 
+    DL.Fecha, 
+    SUM(CASE 
+            WHEN DL.Fecha BETWEEN C.Fecha_Ini_Invest AND C.Fecha_Compromiso_Cierre THEN 1 
+            ELSE 0 
+        END) AS Casos_En_Proceso, 
+    SUM(CASE 
+            WHEN DL.Fecha > C.Fecha_Compromiso_Cierre THEN 1 
+            ELSE 0 
+        END) AS Casos_Vencidos
+FROM DIAS_LABORALES DL
+LEFT JOIN Casos_Abiertos C
+    ON DL.Fecha >= C.Fecha_Ini_Invest
+WHERE DL.Fecha >= (SELECT MIN(Fecha_Ini_Invest) FROM Casos_Abiertos)
+GROUP BY DL.Fecha
+ORDER BY DL.Fecha;
