@@ -1,4 +1,4 @@
-Me gustaría saber cómo puedo hacer esta consulta en sql, usando with como tablas temporales, tengo una tabla que se llama tbl_dias_festivos que tiene una columna tipo datetime llamada Fecha_Dia_Festivo, donde están las fechas en formato yyyy-mm-dd (ya están en datetime), que tiene los días que no se trabajan, ya sean festivos o fines de semana, y tengo otra tabla que se llama TODOS_LOS_DIAS_YEAR con una columna datetime llamada FECHAS, que tiene  todos los días del año, sin importar si es festivo, fin de semana, etc. y por último, tengo una tabla que se llama tbl_casos que tiene estas columnas:
+Me gustaría saber cómo puedo hacer esta consulta en sql, usando with como tablas temporales, tengo una tabla que se llama tbl_dias_festivos que tiene una columna tipo datetime llamada Fecha_Dia_Festivo, donde están las fechas en formato yyyy-mm-dd (ya están en datetime), que tiene los días que no se trabajan, ya sean festivos o fines de semana, y tengo otra tabla que se llama TMP_DATA.TODOS_LOS_DIAS_YEAR con una columna datetime llamada FECHAS, que tiene  todos los días del año, sin importar si es festivo, fin de semana, etc. y por último, tengo una tabla que se llama INFIDELIDAD_SIE.Tbl_Casos que tiene estas columnas:
 ['Id_Caso', 'Codigo_LE_SIIFRA', 'Fecha_Registro_Base', 'Origen_Alerta',
        'Area_Origen_Alerta', 'Fecha_Reporte_Canal', 'Fecha_Reporte_SIE',
        'Fecha_Reporte_Jefe_SIE', 'Categoria_Ini_Caso', 'Tipo_Ini_Caso',
@@ -109,8 +109,9 @@ con un info():
  77  Fecha_Compromiso_Cierre      225 non-null    datetime64[ns]
  78  Prorroga_Le                  4443 non-null   bool          
 
- y lo que necesito es hacer un histórico por cada día de los años que hay en el antijoin entre dias_festivos y la tabla de todos los días del año que me diga los casos en proceso y los casos vencidos, ya que sólo necesito los días laborales, luego, hacer un cross join con la tabla de casos por la columna Fecha_Entrega_Responsable, y la columna FECHA que resulta del antijoin, donde luego se filtran las filas de cada caso donde la fecha sea menor a Fecha_Entrega_Responsable, ya que se supone que antes de eso el caso no se cuenta, para hallar los casos en proceso, tengo esta lógica en MODELER:
- FECHA>=to_date(Fecha_Entrega_Responsable) and (FECHA < to_date(Fecha_Fin_Invest) or @NULL(Fecha_Fin_Invest))
+ y lo que necesito es hacer un histórico por cada día de los años que hay en el antijoin entre dias_festivos y la tabla de todos los días del año que me diga los casos en proceso y los casos vencidos (también si el caso con menor Fecha_Entrega_Responsable es mayor al menor de esos días, no vale la pena tener esos campos anteriores en 0), ya que sólo necesito los días laborales.
+para hallar los casos en proceso, tengo esta lógica en MODELER:
+ FECHA>=to_date(Fecha_Entrega_Responsable) and FECHA < to_date(Fecha_Debe_Cerrar)
  y para la lógica de los vencidos en MODELER es:
  se crea una columna '# DIAS ASIGNADO PROME' que es: date_days_difference(Fecha_Entrega_Responsable, FECHA) -'# DIAS NO LABO'
  dias no labo son  los días festivos, sólo que viene de una estrella en MODELER, pero esta columna es un conteo, por los campos(group by) entre los campos id_caso, Fecha_Fin_Invest, investigador, luego esta columna se hace para filtrar de la siguiente manera:
